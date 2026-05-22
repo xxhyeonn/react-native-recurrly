@@ -1,10 +1,14 @@
-import { View, Text } from 'react-native'
+import { Text } from 'react-native';
+import { styled } from "react-native-css";
+import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+
+const SafeAreaView = styled(RNSafeAreaView);
 
 const Insights = () => {
   return (
-    <View>
+    <SafeAreaView className="flex-1 bg-background p-5">
       <Text>Insights</Text>
-    </View>
+    </SafeAreaView>
   )
 }
 
