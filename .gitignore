@@ -31,10 +31,23 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.development
+.env.test
+.env.production
 
 # typescript
 *.tsbuildinfo
+
+# test coverage
+coverage/
+
+# logs
+*.log
+
+# editor
+.vscode/
 
 app-example
 
