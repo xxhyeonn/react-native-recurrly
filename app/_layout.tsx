@@ -15,6 +15,14 @@ if (!publishableKey) {
   );
 }
 
+/** Hides the splash screen once custom fonts finish loading. */
+function hideSplashWhenFontsReady(fontsLoaded: boolean) {
+  if (fontsLoaded) {
+    SplashScreen.hideAsync();
+  }
+}
+
+/** Root layout that loads fonts and wraps the app in Clerk authentication. */
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     "sans-regular": require("@/assets/fonts/PlusJakartaSans-Regular.ttf"),
@@ -26,9 +34,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
+    hideSplashWhenFontsReady(fontsLoaded);
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;

@@ -25,6 +25,7 @@ const TextInput = styled(RNTextInput);
 
 // ─── validation ─────────────────────────────────────────────────────────────
 
+/** Returns true when the value matches a basic email address pattern. */
 const isValidEmail = (v: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -38,6 +39,7 @@ interface RegisterErrors {
 
 type Step = "register" | "verify";
 
+/** Sign-up screen with email verification flow powered by Clerk. */
 export default function SignUp() {
   // @clerk/expo v3 — signal-based API: no isLoaded / setActive
   const { signUp, errors: clerkErrors, fetchStatus } = useSignUp();
@@ -74,6 +76,7 @@ export default function SignUp() {
 
   // ── register validation ───────────────────────────────────────────────────
 
+  /** Validates registration fields before creating a Clerk account. */
   function validateRegister(): RegisterErrors {
     const errs: RegisterErrors = {};
     if (!emailAddress.trim()) {
@@ -94,8 +97,48 @@ export default function SignUp() {
     return errs;
   }
 
+  /** Updates the email field and clears related validation errors. */
+  function handleEmailChange(v: string) {
+    setEmailAddress(v);
+    setRegisterErrors((e) => ({ ...e, email: undefined }));
+    setRegisterGeneralError(null);
+  }
+
+  /** Updates the password field and clears related validation errors. */
+  function handlePasswordChange(v: string) {
+    setPassword(v);
+    setRegisterErrors((e) => ({ ...e, password: undefined }));
+  }
+
+  /** Updates the confirm-password field and clears related validation errors. */
+  function handleConfirmPasswordChange(v: string) {
+    setConfirmPassword(v);
+    setRegisterErrors((e) => ({ ...e, confirmPassword: undefined }));
+  }
+
+  /** Sanitizes and stores the six-digit email verification code. */
+  function handleCodeChange(v: string) {
+    const clean = v.replace(/\D/g, "").slice(0, 6);
+    setCode(clean);
+    setCodeError(null);
+    setVerifyGeneralError(null);
+  }
+
+  /** Navigates home after sign-up unless Clerk has pending session tasks. */
+  function navigateAfterSignUp({
+    session,
+    decorateUrl,
+  }: {
+    session?: { currentTask?: unknown };
+    decorateUrl: (url: string) => string;
+  }) {
+    if (session?.currentTask) return;
+    router.replace(decorateUrl("/") as Href);
+  }
+
   // ── handlers ──────────────────────────────────────────────────────────────
 
+  /** Creates a Clerk account and sends an email verification code. */
   async function handleRegister() {
     const errs = validateRegister();
     if (Object.keys(errs).length > 0) {
@@ -127,6 +170,7 @@ export default function SignUp() {
     }
   }
 
+  /** Verifies the email code and finalizes the new session. */
   async function handleVerify() {
     if (!code.trim()) {
       setCodeError("Please enter the verification code.");
@@ -147,12 +191,7 @@ export default function SignUp() {
       if (signUp.status === "complete") {
         setIsFinalizing(true);
         await signUp.finalize({
-          navigate: ({ session, decorateUrl }) => {
-            if (session?.currentTask) return;
-
-            const url = decorateUrl("/");
-            router.replace(url as Href);
-          },
+          navigate: navigateAfterSignUp,
         });
       } else {
         setVerifyGeneralError("Verification incomplete. Please try again.");
@@ -178,6 +217,7 @@ export default function SignUp() {
     }
   }
 
+  /** Resends the email verification code with a cooldown guard. */
   async function handleResend() {
     if (resendCooldown) return;
 
@@ -195,6 +235,7 @@ export default function SignUp() {
     setTimeout(() => setResendCooldown(false), 30_000);
   }
 
+  /** Returns the user to the registration step to change their email. */
   function handleBackToRegister() {
     setStep("register");
     setCode("");
@@ -278,11 +319,7 @@ export default function SignUp() {
                         emailError && "auth-input-error"
                       )}
                       value={emailAddress}
-                      onChangeText={(v) => {
-                        setEmailAddress(v);
-                        setRegisterErrors((e) => ({ ...e, email: undefined }));
-                        setRegisterGeneralError(null);
-                      }}
+                      onChangeText={handleEmailChange}
                       placeholder="you@example.com"
                       placeholderTextColor={colors.mutedForeground}
                       autoCapitalize="none"
@@ -310,13 +347,7 @@ export default function SignUp() {
                         )}
                         style={{ paddingRight: 52 }}
                         value={password}
-                        onChangeText={(v) => {
-                          setPassword(v);
-                          setRegisterErrors((e) => ({
-                            ...e,
-                            password: undefined,
-                          }));
-                        }}
+                        onChangeText={handlePasswordChange}
                         placeholder="At least 8 characters"
                         placeholderTextColor={colors.mutedForeground}
                         secureTextEntry={!showPassword}
@@ -356,13 +387,7 @@ export default function SignUp() {
                         )}
                         style={{ paddingRight: 52 }}
                         value={confirmPassword}
-                        onChangeText={(v) => {
-                          setConfirmPassword(v);
-                          setRegisterErrors((e) => ({
-                            ...e,
-                            confirmPassword: undefined,
-                          }));
-                        }}
+                        onChangeText={handleConfirmPasswordChange}
                         placeholder="Repeat your password"
                         placeholderTextColor={colors.mutedForeground}
                         secureTextEntry={!showConfirmPassword}
@@ -475,13 +500,7 @@ export default function SignUp() {
                       codeFieldError && "auth-input-error"
                     )}
                     value={code}
-                    onChangeText={(v) => {
-                      // Strip non-numeric characters, cap at 6.
-                      const clean = v.replace(/\D/g, "").slice(0, 6);
-                      setCode(clean);
-                      setCodeError(null);
-                      setVerifyGeneralError(null);
-                    }}
+                    onChangeText={handleCodeChange}
                     placeholder="······"
                     placeholderTextColor={colors.mutedForeground}
                     keyboardType="number-pad"

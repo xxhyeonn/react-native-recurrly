@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
+/** Expandable card showing subscription summary and detail rows. */
 const SubscriptionCard = ({ name, price, currency, icon, billing, color, category, plan, renewalDate, expanded, onPress, paymentMethod, startDate, status}: SubscriptionCardProps) => {
     return (
         <Pressable onPress={onPress} className={clsx('sub-card', expanded ? 'sub-card-expanded' : 'bg-card')} style={!expanded && color ? { backgroundColor: color } : undefined}>

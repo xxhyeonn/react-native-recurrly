@@ -8,6 +8,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const tabBar = components.tabBar;
 
+/** Renders a tab bar icon with an active-state pill highlight. */
+const TabIcon = ({ focused, icon }: TabIconProps) => {
+    return (
+        <View className="tabs-icon">
+            <View className={clsx('tabs-pill', focused && 'tabs-active')}>
+                <Image source={icon} resizeMode="contain" className="tabs-glyph"/>
+            </View>
+        </View>
+    );
+};
+
+/** Tab navigator that requires authentication before rendering main app screens. */
 const TabsLayout = () => {
     const insets = useSafeAreaInsets();
     const { isSignedIn, isLoaded } = useAuth();
@@ -17,16 +29,12 @@ const TabsLayout = () => {
 
     // Unauthenticated visitors should land on sign-in, not the tabs.
     if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
-    
-    const TabIcon = ({focused, icon}: TabIconProps) => {
-        return (
-            <View className="tabs-icon">
-                <View className={clsx('tabs-pill', focused && 'tabs-active')}>
-                    <Image source={icon} resizeMode="contain" className="tabs-glyph"/>
-                </View>
-            </View>
+
+    /** Renders the icon for a single tab screen. */
+    const renderTabBarIcon = (icon: TabIconProps["icon"]) =>
+        ({ focused }: { focused: boolean }) => (
+            <TabIcon focused={focused} icon={icon} />
         );
-    };
 
     return (
         <Tabs
@@ -59,9 +67,7 @@ const TabsLayout = () => {
                         name={tab.name}
                         options={{
                                 title: tab.title,
-                                tabBarIcon: ({focused}) => (
-                                    <TabIcon focused={focused} icon={tab.icon} />
-                                )
+                                tabBarIcon: renderTabBarIcon(tab.icon)
                         }}/>
                 ))}
         </Tabs>

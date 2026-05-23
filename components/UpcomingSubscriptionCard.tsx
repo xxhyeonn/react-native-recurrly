@@ -1,6 +1,7 @@
 import { formatCurrency } from '@/lib/utils';
 import { Image, Text, View } from 'react-native';
 
+/** Compact card for a subscription renewing soon. */
 const UpcomingSubscriptionCard = ({ icon, name, price, daysLeft, currency }: UpcomingSubscription) => {
   return (
     <View className="upcoming-card">

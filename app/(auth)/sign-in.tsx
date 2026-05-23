@@ -25,6 +25,7 @@ const TextInput = styled(RNTextInput);
 
 // ─── validation ─────────────────────────────────────────────────────────────
 
+/** Returns true when the value matches a basic email address pattern. */
 const isValidEmail = (v: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -35,6 +36,7 @@ interface LocalErrors {
 
 // ─── component ──────────────────────────────────────────────────────────────
 
+/** Sign-in screen with email/password authentication via Clerk. */
 export default function SignIn() {
   // @clerk/expo v3 — signal-based API: no isLoaded / setActive
   const { signIn, errors: clerkErrors, fetchStatus } = useSignIn();
@@ -51,6 +53,7 @@ export default function SignIn() {
 
   // ── validation ────────────────────────────────────────────────────────────
 
+  /** Validates email and password fields before submission. */
   function validate(): LocalErrors {
     const errs: LocalErrors = {};
     if (!emailAddress.trim()) {
@@ -64,8 +67,35 @@ export default function SignIn() {
     return errs;
   }
 
+  /** Updates the email field and clears related validation errors. */
+  function handleEmailChange(v: string) {
+    setEmailAddress(v);
+    setLocalErrors((e) => ({ ...e, email: undefined }));
+    setGeneralError(null);
+  }
+
+  /** Updates the password field and clears related validation errors. */
+  function handlePasswordChange(v: string) {
+    setPassword(v);
+    setLocalErrors((e) => ({ ...e, password: undefined }));
+    setGeneralError(null);
+  }
+
+  /** Navigates home after sign-in unless Clerk has pending session tasks. */
+  function navigateAfterSignIn({
+    session,
+    decorateUrl,
+  }: {
+    session?: { currentTask?: unknown };
+    decorateUrl: (url: string) => string;
+  }) {
+    if (session?.currentTask) return;
+    router.replace(decorateUrl("/") as Href);
+  }
+
   // ── submit ────────────────────────────────────────────────────────────────
 
+  /** Submits credentials to Clerk and navigates home on success. */
   async function handleSignIn() {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -89,13 +119,7 @@ export default function SignIn() {
       if (signIn.status === "complete") {
         setIsFinalizing(true);
         await signIn.finalize({
-          navigate: ({ session, decorateUrl }) => {
-            // Session tasks (MFA setup, etc.) — skip navigation.
-            if (session?.currentTask) return;
-
-            const url = decorateUrl("/");
-            router.replace(url as Href);
-          },
+          navigate: navigateAfterSignIn,
         });
       }
     } catch (err: any) {
@@ -172,11 +196,7 @@ export default function SignIn() {
                       emailError && "auth-input-error"
                     )}
                     value={emailAddress}
-                    onChangeText={(v) => {
-                      setEmailAddress(v);
-                      setLocalErrors((e) => ({ ...e, email: undefined }));
-                      setGeneralError(null);
-                    }}
+                    onChangeText={handleEmailChange}
                     placeholder="you@example.com"
                     placeholderTextColor={colors.mutedForeground}
                     autoCapitalize="none"
@@ -202,11 +222,7 @@ export default function SignIn() {
                       )}
                       style={{ paddingRight: 52 }}
                       value={password}
-                      onChangeText={(v) => {
-                        setPassword(v);
-                        setLocalErrors((e) => ({ ...e, password: undefined }));
-                        setGeneralError(null);
-                      }}
+                      onChangeText={handlePasswordChange}
                       placeholder="Enter your password"
                       placeholderTextColor={colors.mutedForeground}
                       secureTextEntry={!showPassword}
