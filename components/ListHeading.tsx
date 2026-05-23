@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
+/** Section heading with an optional "View All" action. */
 const ListHeading = ({ title, onPressViewAll }: ListHeadingProps) => {
   return (
     <View className="list-head">
