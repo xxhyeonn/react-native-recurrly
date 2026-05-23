@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 // NativeWind v5: TextInput (like SafeAreaView) is not pre-wired for className —
 // it must be explicitly wrapped with styled() so NativeWind can process its styles.
@@ -44,6 +45,7 @@ export default function SignUp() {
   // @clerk/expo v3 — signal-based API: no isLoaded / setActive
   const { signUp, errors: clerkErrors, fetchStatus } = useSignUp();
   const router = useRouter();
+  const posthog = usePostHog();
 
   // ── step ─────────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("register");
@@ -116,7 +118,7 @@ export default function SignUp() {
     setRegisterErrors((e) => ({ ...e, confirmPassword: undefined }));
   }
 
-  /** Sanitizes and stores the six-digit email verification code. */
+  /** Sanitizes and stores the six-digit verification code. */
   function handleCodeChange(v: string) {
     const clean = v.replace(/\D/g, "").slice(0, 6);
     setCode(clean);
@@ -138,7 +140,7 @@ export default function SignUp() {
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
-  /** Creates a Clerk account and sends an email verification code. */
+  /** Creates a Clerk account and sends a verification code. */
   async function handleRegister() {
     const errs = validateRegister();
     if (Object.keys(errs).length > 0) {
@@ -160,6 +162,7 @@ export default function SignUp() {
       if (error) return;
 
       await signUp.verifications.sendEmailCode();
+      posthog.capture("user_registered");
       setStep("verify");
     } catch (err: any) {
       const msg =
@@ -170,14 +173,14 @@ export default function SignUp() {
     }
   }
 
-  /** Verifies the email code and finalizes the new session. */
+  /** Verifies the code and finalizes the new session. */
   async function handleVerify() {
     if (!code.trim()) {
       setCodeError("Please enter the verification code.");
       return;
     }
     if (code.trim().length !== 6) {
-      setCodeError("The code is 6 digits — double-check your email.");
+      setCodeError("The code is 6 digits — double-check your inbox.");
       return;
     }
 
@@ -189,6 +192,12 @@ export default function SignUp() {
       await signUp.verifications.verifyEmailCode({ code: code.trim() });
 
       if (signUp.status === "complete") {
+        const distinctId = emailAddress.trim().toLowerCase();
+        posthog.identify(distinctId, {
+          $set_once: { sign_up_date: new Date().toISOString() },
+        });
+        posthog.capture("user_signup_completed");
+
         setIsFinalizing(true);
         await signUp.finalize({
           navigate: navigateAfterSignUp,
@@ -217,7 +226,7 @@ export default function SignUp() {
     }
   }
 
-  /** Resends the email verification code with a cooldown guard. */
+  /** Resends the verification code with a cooldown guard. */
   async function handleResend() {
     if (resendCooldown) return;
 
@@ -227,6 +236,7 @@ export default function SignUp() {
 
     try {
       await signUp.verifications.sendEmailCode();
+      posthog.capture("verification_code_resent");
     } catch {
       // Silent — user will retry if needed.
     }
@@ -235,7 +245,7 @@ export default function SignUp() {
     setTimeout(() => setResendCooldown(false), 30_000);
   }
 
-  /** Returns the user to the registration step to change their email. */
+  /** Returns the user to the registration step to change their address. */
   function handleBackToRegister() {
     setStep("register");
     setCode("");
@@ -451,7 +461,7 @@ export default function SignUp() {
     );
   }
 
-  // ── Step 2: Verify email ──────────────────────────────────────────────────
+  // ── Step 2: Verify ────────────────────────────────────────────────────────
   return (
     <SafeAreaView className="auth-safe-area">
       <KeyboardAvoidingView
@@ -514,7 +524,7 @@ export default function SignUp() {
                     <Text className="auth-error">{codeFieldError}</Text>
                   ) : (
                     <Text className="auth-helper">
-                      Didn't see it? Check your spam folder.
+                      {"Didn't see it? Check your spam folder."}
                     </Text>
                   )}
                 </View>
