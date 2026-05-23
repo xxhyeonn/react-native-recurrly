@@ -13,12 +13,15 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
+  TextInput as RNTextInput,
   View,
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
+// NativeWind v5: TextInput (like SafeAreaView) is not pre-wired for className —
+// it must be explicitly wrapped with styled() so NativeWind can process its styles.
 const SafeAreaView = styled(RNSafeAreaView);
+const TextInput = styled(RNTextInput);
 
 // ─── validation ─────────────────────────────────────────────────────────────
 
@@ -64,8 +67,8 @@ export default function SignUp() {
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   // ── refs ──────────────────────────────────────────────────────────────────
-  const passwordRef = useRef<TextInput>(null);
-  const confirmRef = useRef<TextInput>(null);
+  const passwordRef = useRef<RNTextInput>(null);
+  const confirmRef = useRef<RNTextInput>(null);
 
   const isLoading = fetchStatus === "fetching" || isFinalizing;
 
