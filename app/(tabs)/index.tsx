@@ -12,19 +12,26 @@ import { styled } from "nativewind";
 import { useState } from "react";
 import { FlatList, Image, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 const SafeAreaView = styled(RNSafeAreaView);
 
 /** Home screen displaying the signed-in user's profile and subscription lists. */
 export default function App() {
     const { user } = useUser();
+    const posthog = usePostHog();
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
 
     // Get user display name: firstName, fullName, or email
     const displayName = user?.firstName || user?.fullName || user?.emailAddresses[0]?.emailAddress || 'User';
 
     /** Toggles expanded state for a subscription card in the main list. */
-    const handleSubscriptionPress = (id: string) => {
+    const handleSubscriptionPress = (id: string, name: string) => {
+        const isCurrentlyExpanded = expandedSubscriptionId === id;
         setExpandedSubscriptionId((currentId) => currentId === id ? null : id);
+        posthog.capture(isCurrentlyExpanded ? "subscription_card_collapsed" : "subscription_card_expanded", {
+            subscription_id: id,
+            subscription_name: name,
+        });
     };
 
     /** Renders a single upcoming renewal card. */
@@ -85,7 +92,7 @@ export default function App() {
         <SubscriptionCard
             {...item}
             expanded={expandedSubscriptionId === item.id}
-            onPress={() => handleSubscriptionPress(item.id)}
+            onPress={() => handleSubscriptionPress(item.id, item.name)}
         />
     );
 

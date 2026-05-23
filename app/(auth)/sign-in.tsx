@@ -17,6 +17,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 // NativeWind v5: TextInput (like SafeAreaView) is not pre-wired for className —
 // it must be explicitly wrapped with styled() so NativeWind can process its styles.
@@ -41,6 +42,7 @@ export default function SignIn() {
   // @clerk/expo v3 — signal-based API: no isLoaded / setActive
   const { signIn, errors: clerkErrors, fetchStatus } = useSignIn();
   const router = useRouter();
+  const posthog = usePostHog();
 
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
@@ -117,6 +119,12 @@ export default function SignIn() {
       if (error) return;
 
       if (signIn.status === "complete") {
+        const email = emailAddress.trim().toLowerCase();
+        posthog.identify(email, {
+          $set_once: { first_sign_in_date: new Date().toISOString() },
+        });
+        posthog.capture("user_signed_in");
+
         setIsFinalizing(true);
         await signIn.finalize({
           navigate: navigateAfterSignIn,
@@ -128,6 +136,9 @@ export default function SignIn() {
         err?.errors?.[0]?.message ??
         "Something went wrong. Please try again.";
       setGeneralError(msg);
+      posthog.capture("user_sign_in_failed", {
+        error_code: err?.errors?.[0]?.code ?? "unknown",
+      });
     } finally {
       setIsFinalizing(false);
     }
@@ -269,7 +280,7 @@ export default function SignIn() {
 
             {/* ── Footer ───────────────────────────────────────────────── */}
             <View className="auth-link-row">
-              <Text className="auth-link-copy">Don't have an account?</Text>
+              <Text className="auth-link-copy">{"Don't have an account?"}</Text>
               <Link href={"/(auth)/sign-up" as Href}>
                 <Text className="auth-link">Create account</Text>
               </Link>
