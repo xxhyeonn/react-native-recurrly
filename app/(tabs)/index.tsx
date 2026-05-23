@@ -1,7 +1,9 @@
+import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import ListHeading from "@/components/ListHeading";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
-import { HOME_BALANCE, HOME_SUBSCRIPTIONS, UPCOMING_SUBSCRIPTIONS } from "@/constants/data";
+import { HOME_BALANCE, UPCOMING_SUBSCRIPTIONS } from "@/constants/data";
+import { useSubscriptions } from "@/context/SubscriptionsContext";
 import { icons } from "@/constants/icons";
 import images from "@/constants/images";
 import "@/global.css";
@@ -10,7 +12,7 @@ import { useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
 import { useState } from "react";
-import { FlatList, Image, Text, View } from "react-native";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 import { usePostHog } from "posthog-react-native";
 const SafeAreaView = styled(RNSafeAreaView);
@@ -20,9 +22,16 @@ export default function App() {
     const { user } = useUser();
     const posthog = usePostHog();
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const { subscriptions, addSubscription } = useSubscriptions();
 
     // Get user display name: firstName, fullName, or email
     const displayName = user?.firstName || user?.fullName || user?.emailAddresses[0]?.emailAddress || 'User';
+
+    /** Prepends a newly created subscription to the shared list. */
+    const handleSubscriptionCreated = (newSub: Subscription) => {
+        addSubscription(newSub);
+    };
 
     /** Toggles expanded state for a subscription card in the main list. */
     const handleSubscriptionPress = (id: string, name: string) => {
@@ -54,7 +63,9 @@ export default function App() {
                     <Text className="home-user-name">{displayName}</Text>
                 </View>
 
-                <Image source={icons.add} className="home-add-icon" />
+                <Pressable onPress={() => setIsModalVisible(true)} hitSlop={8}>
+                    <Image source={icons.add} className="home-add-icon" />
+                </Pressable>
             </View>
 
             <View className="home-balance-card">
@@ -104,17 +115,23 @@ export default function App() {
 
     return (
         <SafeAreaView className="flex-1 bg-background p-5">
-                <FlatList
-                    ListHeaderComponent={renderListHeader}
-                    data={HOME_SUBSCRIPTIONS}
-                    keyExtractor={keySubscriptionById}
-                    renderItem={renderSubscriptionItem}
-                    extraData={expandedSubscriptionId}
-                    ItemSeparatorComponent={renderItemSeparator}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={<Text className="home-empty-state">No subscriptions yet.</Text>}
-                    contentContainerClassName="pb-30"
-                />
+            <FlatList
+                ListHeaderComponent={renderListHeader}
+                data={subscriptions}
+                keyExtractor={keySubscriptionById}
+                renderItem={renderSubscriptionItem}
+                extraData={expandedSubscriptionId}
+                ItemSeparatorComponent={renderItemSeparator}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={<Text className="home-empty-state">No subscriptions yet.</Text>}
+                contentContainerClassName="pb-30"
+            />
+
+            <CreateSubscriptionModal
+                visible={isModalVisible}
+                onClose={() => setIsModalVisible(false)}
+                onSubmit={handleSubscriptionCreated}
+            />
         </SafeAreaView>
     );
 }
